@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+
+	"github.com/itsHabib/cloud-native-go/lib/persistence/dblayer"
 )
 
 var (
@@ -13,7 +15,7 @@ var (
 )
 
 type ServiceConfig struct {
-	Databasetype    dblayer.DBType `json:"databasetype"`
+	Databasetype    dblayer.DBTYPE `json:"databasetype"`
 	DBConnection    string         `json:"dbconnection"`
 	RestfulEndpoint string         `json:"restfulapi_endpoint"`
 }
@@ -22,7 +24,7 @@ func ExtractConfiguration(filename string) (ServiceConfig, error) {
 	conf := ServiceConfig{
 		DBTypeDefault,
 		DBConnectionDefault,
-		ResfulEPDefault,
+		RestfulEPDefault,
 	}
 	file, err := os.Open(filename)
 	if err != nil {
