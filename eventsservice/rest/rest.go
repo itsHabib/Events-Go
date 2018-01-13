@@ -8,13 +8,26 @@ import (
 )
 
 // Sets up routes and serves api at given endpoint and given db handler
-func ServeAPI(endpoint string, databasehandler persistence.DatabaseHandler) error {
+func ServeAPI(endpoint, tlsEndpoint string,
+	databasehandler persistence.DatabaseHandler) (chan error, chan error) {
 	handler := NewEventHandler(databasehandler)
 	r := mux.NewRouter()
+
 	eventsRouter := r.PathPrefix("/events").Subrouter()
 	eventsRouter.Methods("GET").Path("/{SearchCriteria}/{search}").
 		HandlerFunc(handler.FindEventHandler)
 	eventsRouter.Methods("GET").Path("").HandlerFunc(handler.AllEventHandler)
 	eventsRouter.Methods("POST").Path("").HandlerFunc(handler.NewEventHandler)
-	return http.ListenAndServe(endpoint, r)
+
+	httpErrChan := make(chan error)
+	httpTLSErrChan := make(chan error)
+	go func() {
+		httpTLSErrChan <- http.ListenAndServeTLS(tlsEndpoint,
+			"cert.pem", "key.pem", r)
+	}()
+	go func() {
+		httpErrChan <- http.ListenAndServe(endpoint, r)
+	}()
+
+	return httpErrChan, httpTLSErrChan
 }

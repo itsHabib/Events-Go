@@ -18,6 +18,14 @@ func main() {
 	config, _ := configuration.ExtractConfiguration(*confPath)
 	fmt.Println("Connecting to database")
 	dbhandler, _ := dblayer.NewPersistenceLayer(config.Databasetype, config.DBConnection)
+	log.Println("Database connection successful... ")
 	// RESTful API start
-	log.Fatal(rest.ServeAPI(config.RestfulEndpoint, config.RestfulTLSEndpoint, dbhandler))
+	httpErrChan, httpTLSChan := rest.ServeAPI(config.RestfulEndpoint,
+		config.RestfulTLSEndpoint, dbhandler)
+	select {
+	case err := <-httpErrChan:
+		log.Fatal("HTTP Error: ", err)
+	case err := <-httpTLSChan:
+		log.Fatal("HTTPS Error: ", err)
+	}
 }
