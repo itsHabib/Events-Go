@@ -7,7 +7,10 @@ to a database. The events microservice itself has a persistence layer, configura
 serves request using RESTful handlers. To allow different types of database to be used with 
 the handlers each potential database handler must implement a defined interface located
 in lib/persistence/persistence.go The dblayer package acts as a middle man and uses a 
-factory pattern to return a database handler given a configuration.
+factory pattern to return a database handler given a configuration. 
+
+## Security
+The main file is set up to serve both HTTP & HTTPS requests for the eventservice. Each ListenAndServe call for both HTTP & HTTPS are ran in a go routine and both use channels to send back any errors to the main go routine.
 
 ## Task List
 - [ ] complete events microservice
