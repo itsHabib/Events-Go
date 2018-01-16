@@ -6,18 +6,26 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/itsHabib/cloud-native-go/contracts"
+
+	"github.com/itsHabib/cloud-native-go/lib/msgqueue"
 
 	"github.com/gorilla/mux"
 	"github.com/itsHabib/cloud-native-go/lib/persistence"
 )
 
 type eventServiceHandler struct {
-	dbhandler persistence.DatabaseHandler
+	dbhandler    persistence.DatabaseHandler
+	eventEmitter msgqueue.EventEmitter
 }
 
-func NewEventHandler(dbhandler persistence.DatabaseHandler) *eventServiceHandler {
+func newEventHandler(dbhandler persistence.DatabaseHandler,
+	eventEmitter msgqueue.EventEmitter) *eventServiceHandler {
 	return &eventServiceHandler{
-		dbhandler: dbhandler,
+		dbhandler:    dbhandler,
+		eventEmitter: eventEmitter,
 	}
 }
 
@@ -78,7 +86,7 @@ func (eh *eventServiceHandler) AllEventHandler(w http.ResponseWriter,
 }
 
 // Creates a new event in db
-func (eh *eventServiceHandler) NewEventHandler(w http.ResponseWriter,
+func (eh *eventServiceHandler) newEventHandler(w http.ResponseWriter,
 	r *http.Request) {
 	event := persistence.Event{}
 	err := json.NewDecoder(r.Body).Decode(&event)
@@ -89,9 +97,18 @@ func (eh *eventServiceHandler) NewEventHandler(w http.ResponseWriter,
 	}
 	id, err := eh.dbhandler.AddEvent(event)
 	if err != nil {
-		w.WriteHeader(w, "{error: error occured while persisting event %d %s",
+		w.WriteHeader(500)
+		fmt.Fprintf(w, "{error: error occured while persisting event %d %s",
 			id, err)
 		return
 	}
+	msg := contracts.EventCreatedEvent{
+		ID:         hex.EncodeToString(id),
+		Name:       event.Name,
+		LocationID: string(event.Location.ID),
+		Start:      time.Unix(event.StartDate, 0),
+		End:        time.Unix(event.EndDate, 0),
+	}
+	eh.eventEmitter.Emit(&msg)
 	fmt.Fprint(w, `{"id":%d}`, id)
 }
