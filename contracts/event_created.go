@@ -19,3 +19,8 @@ type EventCreatedEvent struct {
 func (e *EventCreatedEvent) EventName() string {
 	return "event.created"
 }
+
+// PartitionKey returns the partition key used for kafka
+func (e *EventCreatedEvent) PartitionKey() string {
+	return e.ID
+}

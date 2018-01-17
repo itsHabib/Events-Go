@@ -15,3 +15,8 @@ type LocationCreatedEvent struct {
 func (c *LocationCreatedEvent) EventName() string {
 	return "locationCreated"
 }
+
+// PartitionKey returns the partition key used for kafka
+func (c *LocationCreatedEvent) PartitionKey() string {
+	return c.ID
+}
