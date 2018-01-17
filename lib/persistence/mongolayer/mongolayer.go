@@ -7,9 +7,10 @@ import (
 )
 
 const (
-	DB     = "events-go"
-	USERS  = "users"
-	EVENTS = "events"
+	DB        = "events-go"
+	USERS     = "users"
+	EVENTS    = "events"
+	LOCATIONS = "locations"
 )
 
 type MongoDBLayer struct {
@@ -45,12 +46,27 @@ func (mgoLayer *MongoDBLayer) getFreshSession() *mgo.Session {
 	return mgoLayer.session.Copy()
 }
 
+func (mgoLayer *MongoDBLayer) AddUser(u persistence.User) ([]byte, error) {
+	s := mgoLayer.getFreshSession()
+	defer s.Close()
+	u.ID = bson.NewObjectId()
+	return []byte(u.ID), s.DB(DB).C(USERS).Insert(u)
+}
+
 func (mgoLayer *MongoDBLayer) FindEvent(id []byte) (persistence.Event, error) {
 	s := mgoLayer.getFreshSession()
 	defer s.Close()
 	e := persistence.Event{}
 	err := s.DB(DB).C(EVENTS).FindId(bson.ObjectId(id)).One(&e)
 	return e, err
+}
+
+func (mgoLayer *MongoDBLayer) AddLocation(l persistence.Location) (persistence.Location, error) {
+	s := mgoLayer.getFreshSession()
+	defer s.Close()
+	l.ID = bson.NewObjectId()
+	err := s.DB(DB).C(LOCATIONS).Insert(l)
+	return l, err
 }
 
 func (mgoLayer *MongoDBLayer) FindEventByName(name string) (persistence.Event, error) {
@@ -67,4 +83,27 @@ func (mgoLayer *MongoDBLayer) FindAllAvailableEvents() ([]persistence.Event, err
 	events := []persistence.Event{}
 	err := s.DB(DB).C(EVENTS).Find(nil).All(&events)
 	return events, err
+}
+
+func (mgoLayer *MongoDBLayer) AddBookingForUser(id []byte, bk persistence.Booking) error {
+	s := mgoLayer.getFreshSession()
+	defer s.Close()
+	return s.DB(DB).C(USERS).UpdateId(bson.ObjectId(id), bson.M{"$addToSet": bson.M{"bookings": []persistence.Booking{bk}}})
+}
+
+func (mgoLayer *MongoDBLayer) FindUser(f string, l string) (persistence.User, error) {
+	s := mgoLayer.getFreshSession()
+	defer s.Close()
+	u := persistence.User{}
+	err := s.DB(DB).C(USERS).Find(bson.M{"first": f, "last": l}).One(&u)
+	//fmt.Printf("Found %v \n", u.String())
+	return u, err
+}
+
+func (mgoLayer *MongoDBLayer) FindBookingsForUser(id []byte) ([]persistence.Booking, error) {
+	s := mgoLayer.getFreshSession()
+	defer s.Close()
+	u := persistence.User{}
+	err := s.DB(DB).C(USERS).FindId(bson.ObjectId(id)).One(&u)
+	return u.Bookings, err
 }
